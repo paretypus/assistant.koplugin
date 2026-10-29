@@ -223,7 +223,7 @@ function AssistantDialog:_createAndShowViewer(highlightedText, message_history, 
   }
   
   UIManager:show(chatgpt_viewer)
-  require("assistant_utils").scheduleWifiDisable(self.CONFIGURATION)
+  require("assistant_utils").scheduleWifiDisable(self.CONFIGURATION, self.assistant.settings)
 end
 
 

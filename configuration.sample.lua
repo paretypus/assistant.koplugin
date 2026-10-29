@@ -134,6 +134,16 @@ local CONFIGURATION = {
             temperature = 0.7,
             max_tokens = 4096
         },
+        tavily = {
+            model = "tavily", -- not used for search API but required by the plugin
+            base_url = "https://api.tavily.com/search",
+            api_key = "your-tavily-api-key", -- Get your API key from https://tavily.com
+            additional_parameters = {
+                search_depth = "basic", -- "basic" (fast) or "advanced" (more thorough)
+                max_results = 5, -- number of search results (1-20)
+                topic = "general", -- "general", "news", or "finance"
+            }
+        },
     },
 
     -- Optional features 
@@ -147,15 +157,7 @@ local CONFIGURATION = {
         default_folder_for_logs = nil, -- Set the default folder for auto saved logs, nil for the same folder as the book, ex: "/mnt/onboard/logs/" for Kobo , "/mnt/us/documents/logs/" for Kindle
         max_text_length_for_analysis = 100000, -- max text lenght to be used on xray-recap-book analyzes, 
         max_page_size_for_analysis =250, --maximum page size to be used on xray-recap-book analyzes (for page-based documents, ex: PDF)
-        wifi_disable_delay = 30, -- seconds to wait before disabling wifi after any AI query (0 = disable immediately, nil = never disable)
-
-        -- Term X-Ray context extraction (LexRank) tuning.
-        -- Controls how much book context is gathered when {context} is used in the term_xray prompt.
-        -- term_xray_context = {
-        --     max_sentences = 60,      -- max context sentences sent to the API (default: 60)
-        --     context_window = 2,      -- sentences of context around each term mention (default: 2)
-        --     lexrank_threshold = 0.1, -- similarity threshold, higher = more selective (default: 0.1)
-        -- },
+        wifi_disable_delay = 30, -- default seconds to wait before disabling wifi after any AI query (0 = disable immediately, nil = never disable). Can be overridden at runtime in AI Assistant Settings > Wi-Fi Auto-Disable.
 
         -- These are prompts defined in `prompts.lua`, can be overriden here.
         -- each prompt shown as a button in the main dialog.

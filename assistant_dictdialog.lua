@@ -377,7 +377,7 @@ local function showDictionaryDialog(assistant, highlightedText, message_history,
     }
 
     UIManager:show(chatgpt_viewer)
-    require("assistant_utils").scheduleWifiDisable(CONFIGURATION)
+    require("assistant_utils").scheduleWifiDisable(CONFIGURATION, assistant.settings)
 end
 
 return showDictionaryDialog

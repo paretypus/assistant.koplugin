@@ -235,7 +235,7 @@ local function showFeatureDialog(assistant, feature_type, title, author, progres
     }
 
     UIManager:show(chatgpt_viewer)
-    require("assistant_utils").scheduleWifiDisable(CONFIGURATION)
+    require("assistant_utils").scheduleWifiDisable(CONFIGURATION, assistant.settings)
 end
 
 return showFeatureDialog

@@ -326,6 +326,93 @@ function SettingsDialog:onCloseWidget()
 end
 
 SettingsDialog.genMenuSettings = function (assistant)
+    local assistant_utils = require("assistant_utils")
+    local wifi_disable_presets = { 0, 30, 60, 90, 120, 300 }
+
+    local function getWifiDisableDelay()
+        return assistant_utils.getWifiDisableDelay(assistant.CONFIGURATION, assistant.settings)
+    end
+
+    local function saveWifiDisableDelay(value)
+        assistant.settings:saveSetting("wifi_disable_delay", value)
+        assistant.updated = true
+        assistant_utils.refreshWifiDisableTimer(assistant.CONFIGURATION, assistant.settings)
+    end
+
+    local function wifiDisableDelayText(delay)
+        if delay == nil then
+            return _("Never")
+        elseif delay == 0 then
+            return _("Immediately")
+        elseif delay % 60 == 0 then
+            return T(_("%1 min"), delay / 60)
+        end
+        return T(_("%1 s"), delay)
+    end
+
+    local function isWifiDisablePreset(delay)
+        for _, preset in ipairs(wifi_disable_presets) do
+            if delay == preset then return true end
+        end
+        return false
+    end
+
+    local function buildWifiDisableMenuItem()
+        local sub_item_table = {
+            {
+                text = _("Never"),
+                radio = true,
+                checked_func = function () return getWifiDisableDelay() == nil end,
+                callback = function () saveWifiDisableDelay(false) end,
+            },
+        }
+
+        for _, delay in ipairs(wifi_disable_presets) do
+            table.insert(sub_item_table, {
+                text = wifiDisableDelayText(delay),
+                radio = true,
+                checked_func = function () return getWifiDisableDelay() == delay end,
+                callback = function () saveWifiDisableDelay(delay) end,
+            })
+        end
+
+        table.insert(sub_item_table, {
+            text = _("Custom..."),
+            radio = true,
+            keep_menu_open = true,
+            checked_func = function ()
+                local delay = getWifiDisableDelay()
+                return delay ~= nil and not isWifiDisablePreset(delay)
+            end,
+            callback = function (touchmenu_instance)
+                local current = getWifiDisableDelay()
+                if current == nil or current == 0 then current = 90 end
+                UIManager:show(SpinWidget:new{
+                    title_text = _("Wi-Fi Auto-Disable Delay"),
+                    info_text = _("Seconds to wait after an AI query before disabling Wi-Fi."),
+                    value = current,
+                    value_min = 1, value_max = 3600, default_value = 90,
+                    unit = _("s"),
+                    ok_text = _("Set"),
+                    callback = function (spin)
+                        saveWifiDisableDelay(spin.value)
+                    end,
+                    close_callback = function ()
+                        touchmenu_instance:updateItems()
+                    end,
+                })
+            end,
+        })
+
+        return {
+            text_func = function ()
+                return T(_("Wi-Fi Auto-Disable: %1"), wifiDisableDelayText(getWifiDisableDelay()))
+            end,
+            keep_menu_open = true,
+            sub_item_table = sub_item_table,
+        }
+    end
+
     local sub_item_table = {
         {
             text_func = function ()
@@ -391,6 +478,7 @@ SettingsDialog.genMenuSettings = function (assistant)
                 },
             }
         },
+        buildWifiDisableMenuItem(),
         {
             -- @translators: functional overriding
             text = _("KOReader Tweaks & Overrides"),

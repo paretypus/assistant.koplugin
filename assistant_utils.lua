@@ -220,25 +220,53 @@ end
 
 local wifi_disable_timer = nil
 
-local function scheduleWifiDisable(CONFIGURATION)
-    local delay_sec = koutil.tableGetValue(CONFIGURATION, "features", "wifi_disable_delay")
-    if delay_sec == nil then return end
+-- Resolve the effective delay: the runtime UI setting overrides configuration.lua.
+-- Returns nil when auto-disable is disabled, otherwise a number of seconds (0 = immediately).
+local function getWifiDisableDelay(CONFIGURATION, settings)
+    local delay_sec
+    if settings and settings:has("wifi_disable_delay") then
+        delay_sec = settings:readSetting("wifi_disable_delay")
+    else
+        delay_sec = koutil.tableGetValue(CONFIGURATION, "features", "wifi_disable_delay")
+    end
 
+    -- `false` is used by the settings UI to mean "never disable Wi-Fi".
+    if delay_sec == nil or delay_sec == false then return nil end
+    return tonumber(delay_sec)
+end
+
+local function cancelWifiDisable()
     if wifi_disable_timer then
         UIManager:unschedule(wifi_disable_timer)
+        wifi_disable_timer = nil
     end
+end
 
-    if delay_sec > 0 and NetworkMgr:isWifiOn() then
+local function applyWifiDisableDelay(CONFIGURATION, settings)
+    local delay_sec = getWifiDisableDelay(CONFIGURATION, settings)
+    cancelWifiDisable()
+    if delay_sec == nil then return end
+    if not NetworkMgr:isWifiOn() then return end
+
+    if delay_sec > 0 then
         wifi_disable_timer = function()
-            if NetworkMgr:isWifiOn() then
-                NetworkMgr:disableWifi(nil, true)
-            end
             wifi_disable_timer = nil
+            NetworkMgr:disableWifi(nil, true)
         end
         UIManager:scheduleIn(delay_sec, wifi_disable_timer)
-    elseif delay_sec == 0 and NetworkMgr:isWifiOn() then
+    else
         NetworkMgr:disableWifi(nil, true)
     end
+end
+
+local function scheduleWifiDisable(CONFIGURATION, settings)
+    applyWifiDisableDelay(CONFIGURATION, settings)
+end
+
+-- Re-apply the delay when a timer is already pending, so UI changes take effect immediately.
+local function refreshWifiDisableTimer(CONFIGURATION, settings)
+    if not wifi_disable_timer then return end
+    applyWifiDisableDelay(CONFIGURATION, settings)
 end
 
 return {
@@ -246,5 +274,7 @@ return {
     extractHighlightsNotesAndNotebook = extractHighlightsNotesAndNotebook,
     getPageInfo = getPageInfo,
     saveToNotebookFile = saveToNotebookFile,
-    scheduleWifiDisable = scheduleWifiDisable
+    getWifiDisableDelay = getWifiDisableDelay,
+    scheduleWifiDisable = scheduleWifiDisable,
+    refreshWifiDisableTimer = refreshWifiDisableTimer
 }
