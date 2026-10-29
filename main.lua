@@ -181,7 +181,7 @@ function Assistant:addToMainMenu(menu_items)
                 end,
                 hold_callback = function ()
                   UIManager:show(InfoMessage:new{
-                    text = _("A very brief, spoiler-free summary of the book up to current reading progress.")
+                    text = _("A spoiler-free recap of the last pages you read, helping you pick up where you left off.")
                   })
                 end,
               },
@@ -676,6 +676,17 @@ function Assistant:onDictButtonsReady(dict_popup, dict_buttons)
     })
   end
 
+  if self.settings:readSetting("dict_popup_show_recap", true) then
+    table.insert(plugin_buttons, {
+      id = "assistant_recap",
+      font_bold = true,
+      text = _("Recap") .. " (AI)",
+      callback = function()
+        self:runRecap()
+      end,
+    })
+  end
+
   if self.settings:readSetting("dict_popup_show_term_xray", false) then
     table.insert(plugin_buttons, {
       id = "assistant_term_xray",
@@ -747,6 +758,21 @@ function Assistant:onDictButtonsReady(dict_popup, dict_buttons)
   end
 end
 
+  function Assistant:runRecap(book)
+    if not self:isConfigured() then
+      return
+    end
+
+    book = book or getDocumentInfo(self.ui.document)
+
+    NetworkMgr:runWhenOnline(function()
+      Trapper:wrap(function()
+        local showFeatureDialog = require("assistant_featuredialog")
+        showFeatureDialog(self, "recap", book.title, book.authors, book.percent_finished)
+      end)
+    end)
+  end
+
   -- Event handlers for gesture-triggered actions
   function Assistant:onAskAIQuestion()
     if not self:isConfigured() then
@@ -763,14 +789,7 @@ end
   end
 
   function Assistant:onAskAIRecap()
-    if not self:isConfigured() then return end
-    NetworkMgr:runWhenOnline(function()
-      local book = getDocumentInfo(self.ui.document)
-      local showFeatureDialog = require("assistant_featuredialog")
-      Trapper:wrap(function()
-        showFeatureDialog(self, "recap", book.title, book.authors, book.percent_finished)
-      end)
-    end)
+    self:runRecap()
     return true
   end
 
@@ -953,12 +972,11 @@ function Assistant:_hookRecap()
             text            = message,
             ok_text         = _("Yes"),
             ok_callback     = function()
-              NetworkMgr:runWhenOnline(function()
-                local showFeatureDialog = require("assistant_featuredialog")
-                Trapper:wrap(function()
-                  showFeatureDialog(assistant, "recap", title, authors, percent_finished)
-                end)
-              end)
+              assistant:runRecap({
+                title = title,
+                authors = authors,
+                percent_finished = percent_finished,
+              })
             end,
             cancel_text     = _("No"),
           })

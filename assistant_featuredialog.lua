@@ -13,6 +13,7 @@ local ChatGPTViewer = require("assistant_viewer")
 local assistant_prompts = require("assistant_prompts").assistant_prompts
 local NetworkMgr = require("ui/network/manager")
 local extractBookTextForAnalysis = require("assistant_utils").extractBookTextForAnalysis
+local extractRecentPagesText = require("assistant_utils").extractRecentPagesText
 local extractHighlightsNotesAndNotebook = require("assistant_utils").extractHighlightsNotesAndNotebook
 
 local function showFeatureDialog(assistant, feature_type, title, author, progress_percent, message_history)
@@ -29,6 +30,7 @@ local function showFeatureDialog(assistant, feature_type, title, author, progres
 
     local formatted_progress_percent = string.format("%.2f", progress_percent * 100)
     local feature_title, loading_message, system_prompt, user_prompt_template, book_text, highlights_notes
+    local recent_text, recap_start_page, recap_current_page
 
     local language = assistant.settings:readSetting("response_language") or assistant.ui_language
 
@@ -114,7 +116,9 @@ local function showFeatureDialog(assistant, feature_type, title, author, progres
 
         book_text = nil
         highlights_notes = nil
-        if feature_type == "xray" or feature_type == "recap" then
+        if feature_type == "recap" then
+          recent_text, recap_start_page, recap_current_page = extractRecentPagesText(CONFIGURATION, ui)
+        elseif feature_type == "xray" then
           if assistant.settings:readSetting("use_book_text_for_analysis", false) then
             book_text = extractBookTextForAnalysis(CONFIGURATION, ui)
           end
@@ -126,7 +130,15 @@ local function showFeatureDialog(assistant, feature_type, title, author, progres
         end
     end
 
-    if assistant.settings:readSetting("auto_prompt_suggest", false) then
+    if feature_type == "recap" and (not recent_text or recent_text:match("^%s*$")) then
+      UIManager:show(InfoMessage:new{
+        icon = "notice-warning",
+        text = _("Could not extract text from the recent pages."),
+      })
+      return
+    end
+
+    if feature_type ~= "recap" and assistant.settings:readSetting("auto_prompt_suggest", false) then
       local suggestions_prompt = assistant_prompts.suggestions_prompt:gsub("{(%w+)}", {language = language})
       system_prompt = system_prompt .. suggestions_prompt
     end
@@ -149,12 +161,19 @@ local function showFeatureDialog(assistant, feature_type, title, author, progres
     }
     
     -- Format the user prompt with variables
-    local user_content = user_prompt_template:gsub("{(%w+)}", {
-      title = title,
-      author = author,
-      progress = formatted_progress_percent,
-      language = language
-    })
+    local user_content
+    if feature_type == "recap" then
+      user_content = user_prompt_template
+        :gsub("{{book_title}}", function() return title end)
+        :gsub("{{recent_text_excerpt}}", function() return recent_text end)
+    else
+      user_content = user_prompt_template:gsub("{(%w+)}", {
+        title = title,
+        author = author,
+        progress = formatted_progress_percent,
+        language = language
+      })
+    end
 
     user_content = user_content .. book_text_prompt .. highlights_notes_prompt
     
@@ -165,9 +184,15 @@ local function showFeatureDialog(assistant, feature_type, title, author, progres
     table.insert(message_history, context_message)
 
     local function createResultText(answer)
-      local result_text = 
-        TextBoxWidget.PTF_HEADER ..
-        TextBoxWidget.PTF_BOLD_START .. title .. TextBoxWidget.PTF_BOLD_END .. " by " .. author .. " is " .. formatted_progress_percent .. "% complete.\n\n" ..  answer
+      local result_text
+      if feature_type == "recap" then
+        result_text = T(_("**Recap** — %1 (pages %2–%3)"), title, recap_start_page, recap_current_page)
+          .. "\n\n" .. answer
+      else
+        result_text =
+          TextBoxWidget.PTF_HEADER ..
+          TextBoxWidget.PTF_BOLD_START .. title .. TextBoxWidget.PTF_BOLD_END .. " by " .. author .. " is " .. formatted_progress_percent .. "% complete.\n\n" ..  answer
+      end
       return result_text
     end
 

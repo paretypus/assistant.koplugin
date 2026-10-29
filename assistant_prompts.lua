@@ -246,16 +246,35 @@ local assistant_prompts = {
     },
     recap = {
         system_prompt =
-        "You are an expert literary assistant that provides accurate information about books. Always respond in Markdown format.",
-        user_prompt = [[
-'''{title}''' by '''{author}''' that has been {progress}% read.
-Given the above title and author of a book and the positional parameter, very briefly summarize the contents of the book prior with rich text formatting.
-Above all else do not give any spoilers to the book, only consider prior content.
-Focus on the more recent content rather than a general summary to help the user pick up where they left off.
-Match the tone and energy of the book, for example if the book is funny match that style of humor and tone, if it's an exciting fantasy novel show it, if it's a historical or sad book reflect that.
-Use text bolding to emphasize names and locations. Use italics to emphasize major plot points. No emojis or symbols.
-Answer this whole response in {language} language. Only show the replies, do not give a description.
-Also answer with entertaining tone and high quality detail with a focus on summarization. You also match the tone of the book provided.]]
+        "You are a context-aware reading assistant. Your task is to bring the reader up to speed on what just happened in the book so they can resume reading seamlessly after taking a break.",
+        user_prompt = [[INPUT DATA:
+- BOOK TITLE: {{book_title}}
+- RECENT TEXT (The pages/text the user just read):
+"""
+{{recent_text_excerpt}}
+"""
+
+TASK:
+Provide a clear, cohesive summary of the RECENT TEXT provided above.
+
+CRITICAL CONSTRAINTS & RULES:
+1. ZERO SPOILERS PAST THIS POINT:
+   - ONLY summarize events, dialogue, and reveals contained within the provided text excerpt.
+   - Do NOT reference, hint at, or reveal ANY events, plot twists, character fates, or future developments that occur beyond this exact text.
+
+2. FOCUS ON RECALL & CONTINUITY:
+   - Highlight the immediate context: Where are the characters right now? What are they doing or discussing? What is the current tension or active goal?
+   - Do NOT miss key details, active character decisions, or critical dialogue exchanges present in the excerpt.
+
+3. FORMAT & TONE:
+   - Keep the recap concise and fast to scan (150–250 words total).
+   - Use plain text with clear bullet points grouped logically.
+   - Maintain a direct, neutral narrative tone.
+
+SUMMARY OUTPUT FORMAT:
+- **Current Situation**: [1–2 sentences setting the immediate scene/location]
+- **Key Developments**: [Bullet points of crucial actions, revelations, or discussions in this excerpt]
+- **Where You Left Off**: [1 sentence summarizing the exact moment/cliffhanger where the text ends]]
     },
     xray = {
         system_prompt =

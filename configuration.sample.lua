@@ -157,6 +157,7 @@ local CONFIGURATION = {
         default_folder_for_logs = nil, -- Set the default folder for auto saved logs, nil for the same folder as the book, ex: "/mnt/onboard/logs/" for Kobo , "/mnt/us/documents/logs/" for Kindle
         max_text_length_for_analysis = 100000, -- max text lenght to be used on xray-recap-book analyzes, 
         max_page_size_for_analysis =250, --maximum page size to be used on xray-recap-book analyzes (for page-based documents, ex: PDF)
+        page_lookback_count = 10, -- number of previous pages sent to the AI for Recap
         wifi_disable_delay = 30, -- default seconds to wait before disabling wifi after any AI query (0 = disable immediately, nil = never disable). Can be overridden at runtime in AI Assistant Settings > Wi-Fi Auto-Disable.
 
         -- These are prompts defined in `prompts.lua`, can be overriden here.
@@ -181,7 +182,8 @@ local CONFIGURATION = {
             -- for an example of a custom book-level prompt, see: https://github.com/omer-faruq/assistant.koplugin/wiki/configuration#5-book-level-custom-prompts
         },    
 
-        -- AI Recap configuration
+        -- AI Recap configuration (uses the last `page_lookback_count` pages)
+        -- Available placeholders: {{book_title}}, {{recent_text_excerpt}}
         -- If you want to override the default prompts, you can uncomment and modify the following lines:
         -- recap_config = {
         --   system_prompt = "",

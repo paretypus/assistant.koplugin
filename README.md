@@ -20,7 +20,7 @@ A powerful plugin that lets you interact with AI language models (Claude, GPT-4,
   - **Quick Actions**: One-click buttons for common tasks like summarizing or explaining
   - **Dictionary**: Get synonyms, context-aware dictionary explanations, and examples for the selected word. (thanks to [plateaukao](https://github.com/plateaukao))
   - **Term X-Ray**: For single word or phrase highlights, get the meaning of it based on the previously mentioned places. (thanks to [Michael Kucek](https://github.com/michael-kucek))
-  - **Recap**: Get a quick recap of a book when you open it, for books that haven't been opened in 28 hours and are less than 95% complete. Also available via shortcut/gesture for on-demand access. Fully configurable prompts. (thanks to [jbhul](https://github.com/jbhul))
+  - **Recap**: Get a spoiler-free recap of the last pages you read (10 by default) to pick up where you left off. Available via shortcut/gesture, the Tools menu, the Dictionary Popup, and when reopening books that haven't been opened in 28 hours and are less than 95% complete. Fully configurable prompts. (thanks to [jbhul](https://github.com/jbhul))
   - **X-Ray**: Generate a spoiler-free, structured book X-Ray up to your current progress, listing key characters, locations, themes, terms, a concise timeline, and a quick re-immersion section. Fully configurable prompts; available via shortcut/gesture.
 - **Custom Prompts**: Create your own specialized AI helpers with their own quick actions and prompts. Possible for highlighted text and book-level.
 - **Smart Display**: Automatically hides long text snippets for cleaner viewing

@@ -7,6 +7,88 @@ local koutil = require("util")
 local NetworkMgr = require("ui/network/manager")
 local _ = require("assistant_gettext")
 
+local function normalizePageText(page_text)
+    if type(page_text) ~= "table" then
+        return page_text or ""
+    end
+
+    local texts = {}
+    for _, block in ipairs(page_text) do
+        if type(block) == "table" then
+            for i = 1, #block do
+                local span = block[i]
+                if type(span) == "table" and span.word then
+                    table.insert(texts, span.word)
+                end
+            end
+        end
+    end
+    return table.concat(texts, " ")
+end
+
+local function getCurrentPageNumber(ui)
+    local document = ui.document
+    local current_page
+
+    if document.info.has_pages then
+        current_page = ui.view and ui.view.state and ui.view.state.page
+    end
+
+    if not current_page then
+        local ok, xp = pcall(function() return document:getXPointer() end)
+        if ok and xp then
+            local page_ok, page = pcall(function() return document:getPageFromXPointer(xp) end)
+            if page_ok then
+                current_page = page
+            end
+        end
+    end
+
+    return math.max(1, tonumber(current_page) or 1)
+end
+
+local function extractRecentPagesText(CONFIGURATION, ui)
+    local document = ui.document
+    local configured_lookback = koutil.tableGetValue(CONFIGURATION, "features", "page_lookback_count")
+    local page_lookback_count = tonumber(configured_lookback) or 10
+    page_lookback_count = math.max(1, math.floor(page_lookback_count))
+
+    local current_page = getCurrentPageNumber(ui)
+    local count_ok, total_pages = pcall(function() return document:getPageCount() end)
+    if count_ok and tonumber(total_pages) and tonumber(total_pages) > 0 then
+        current_page = math.min(current_page, tonumber(total_pages))
+    end
+    current_page = math.max(1, current_page)
+
+    local start_page = math.max(1, current_page - page_lookback_count)
+    local recent_text = ""
+
+    if document.info.has_pages then
+        local pages = {}
+        for page = start_page, current_page do
+            local page_ok, page_text = pcall(function() return document:getPageText(page) end)
+            table.insert(pages, page_ok and normalizePageText(page_text) or "")
+        end
+        recent_text = table.concat(pages, "\n")
+    else
+        local end_ok, end_xp = pcall(function() return document:getXPointer() end)
+        local start_ok, start_xp = pcall(function() return document:getPageXPointer(start_page) end)
+        if end_ok and start_ok and end_xp and start_xp then
+            local text_ok, text = pcall(function() return document:getTextFromXPointers(start_xp, end_xp) end)
+            if text_ok and text then
+                recent_text = text
+            end
+        end
+    end
+
+    local max_text_length_for_analysis = koutil.tableGetValue(CONFIGURATION, "features", "max_text_length_for_analysis") or 100000
+    if #recent_text > max_text_length_for_analysis then
+        recent_text = recent_text:sub(-max_text_length_for_analysis)
+    end
+
+    return recent_text, start_page, current_page
+end
+
 local function extractBookTextForAnalysis(CONFIGURATION, ui)
     local book_text = nil
       if not ui.document.info.has_pages then
@@ -28,21 +110,7 @@ local function extractBookTextForAnalysis(CONFIGURATION, ui)
         local start_page = math.max(1, current_page - max_page_size_for_analysis)
         book_text = ""
         for page = start_page, current_page do
-            local page_text = ui.document:getPageText(page) or ""
-            if type(page_text) == "table" then
-                local texts = {}
-                for _, block in ipairs(page_text) do
-                    if type(block) == "table" then
-                        for i = 1, #block do
-                            local span = block[i]
-                            if type(span) == "table" and span.word then
-                                table.insert(texts, span.word)
-                            end
-                        end
-                    end
-                end
-                page_text = table.concat(texts, " ")
-            end
+            local page_text = normalizePageText(ui.document:getPageText(page))
             book_text = book_text .. page_text .. "\n"
         end
         local max_text_length_for_analysis = koutil.tableGetValue(CONFIGURATION, "features", "max_text_length_for_analysis") or 100000
@@ -271,6 +339,7 @@ end
 
 return {
     extractBookTextForAnalysis = extractBookTextForAnalysis,
+    extractRecentPagesText = extractRecentPagesText,
     extractHighlightsNotesAndNotebook = extractHighlightsNotesAndNotebook,
     getPageInfo = getPageInfo,
     saveToNotebookFile = saveToNotebookFile,

@@ -534,6 +534,15 @@ SettingsDialog.genMenuSettings = function (assistant)
                     end
                 },
                 {
+                    text = _("Show Recap(AI) in Dictionary Popup"),
+                    checked_func = function () return assistant.settings:readSetting("dict_popup_show_recap", true) end,
+                    callback = function()
+                        local enabled = assistant.settings:readSetting("dict_popup_show_recap", true)
+                        assistant.settings:saveSetting("dict_popup_show_recap", not enabled)
+                        assistant.updated = true
+                    end
+                },
+                {
                     text = _("Show Custom Prompts in Dictionary Popup"),
                     checked_func = function () return assistant.settings:readSetting("dict_popup_show_custom_prompts", false) end,
                     callback = function()
@@ -568,7 +577,7 @@ SettingsDialog.genMenuSettings = function (assistant)
             end
         },
         {
-            text = _("Use book text for x-ray and recap"),
+            text = _("Use book text for X-Ray"),
             checked_func = function () return assistant.settings:readSetting("use_book_text_for_analysis", false) end,
             callback = function()
                 assistant.settings:toggle("use_book_text_for_analysis")
